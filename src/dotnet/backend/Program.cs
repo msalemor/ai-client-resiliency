@@ -1,14 +1,11 @@
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text.Json;
+using common;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.ObjectPool;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -22,22 +19,18 @@ if (app.Environment.IsDevelopment())
 }
 
 //SemaphoreSlim semaphore1 = new(1, 1);
-object obj1 = new();
-DateTime timeout1 = new();
-int tokens1 = 0;
-int tokencount = 0;
+object lockObject = new();
 var rule = APIRule.None;
-bool available1 = true;
 
-Dictionary<string, Setting> values = [];
+Dictionary<string, APISetting> values = [];
 
 void setTimeout(string endpoint, DateTime ts)
 {
-    lock (obj1)
+    lock (lockObject)
     {
-        if (!values.TryGetValue(endpoint, out Setting? value))
+        if (!values.TryGetValue(endpoint, out APISetting? value))
         {
-            values[endpoint] = new Setting { Timeout = ts };
+            values[endpoint] = new APISetting { Timeout = ts };
         }
         else
         {
@@ -47,11 +40,11 @@ void setTimeout(string endpoint, DateTime ts)
 }
 void setAvailable(string endpoint, bool status)
 {
-    lock (obj1)
+    lock (lockObject)
     {
-        if (!values.TryGetValue(endpoint, out Setting? value))
+        if (!values.TryGetValue(endpoint, out APISetting? value))
         {
-            values[endpoint] = new Setting { Available = status };
+            values[endpoint] = new APISetting { Available = status };
         }
         else
         {
@@ -62,11 +55,11 @@ void setAvailable(string endpoint, bool status)
 
 void setAPIRule(string endpoint, APIRule rl)
 {
-    lock (obj1)
+    lock (lockObject)
     {
-        if (!values.TryGetValue(endpoint, out Setting? value))
+        if (!values.TryGetValue(endpoint, out APISetting? value))
         {
-            values[endpoint] = new Setting { Rule = rl };
+            values[endpoint] = new APISetting { Rule = rl };
         }
         else
         {
@@ -75,12 +68,12 @@ void setAPIRule(string endpoint, APIRule rl)
     }
 }
 
-Setting getValues(string endpoint)
+APISetting getValues(string endpoint)
 {
     values ??= [];
-    if (!values.TryGetValue(endpoint, out Setting? value))
+    if (!values.TryGetValue(endpoint, out APISetting? value))
     {
-        value = new Setting { Timeout = DateTime.UtcNow, Available = true, Rule = APIRule.None };
+        value = new APISetting { Timeout = DateTime.UtcNow, Available = true, Rule = APIRule.None };
         values[endpoint] = value;
     }
     return value;
@@ -136,7 +129,7 @@ app.Use(async (context, next) =>
             }
 
             var requestCount = 0;
-            lock (obj1)
+            lock (lockObject)
             {
                 // Update the dictionary across threads
                 var (ts, _) = clientRequestCounts[subID];
@@ -197,7 +190,7 @@ app.Use(async (context, next) =>
                 }
 
                 int tokenCount = 0;
-                lock (obj1)
+                lock (lockObject)
                 {
                     var (_, counts) = clientRequestCounts[subID];
                     counts.Add(new Tuple<int, DateTime>(request.max_tokens, DateTime.UtcNow));
@@ -234,23 +227,5 @@ group.MapPost("/endpoint2", ([FromHeader(Name = "api-key")][Required] string req
     return Results.Ok(new CompletionResponse("Hello World"));
 })
 .WithName("Endpoint2");
-;
-
 
 app.Run();
-
-record PromptRequest([Required] string prompt, int max_tokens = 100, double temperature = 0.3);
-record CompletionResponse(string content);
-class Setting()
-{
-    public DateTime Timeout { get; set; } = DateTime.UtcNow;
-    public bool Available { get; set; } = true;
-    public APIRule Rule { get; set; } = APIRule.None;
-};
-
-public enum APIRule
-{
-    None,
-    RateLimit,
-    TPM
-}
