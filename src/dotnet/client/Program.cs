@@ -3,27 +3,30 @@ using System.Text.Json;
 using common;
 using Reliability;
 
+var apiKey1 = Guid.NewGuid().ToString();
+var apiKey2 = Guid.NewGuid().ToString();
+
 var endpoints = new Tuple<string, string>[] {
-    new("http://localhost:5295/api/v1/endpoint1",Guid.NewGuid().ToString()),
-    new("http://localhost:5295/api/v2/endpoint2",Guid.NewGuid().ToString())
+    new("http://localhost:5295/api/v1/endpoint1",apiKey1),
+    new("http://localhost:5295/api/v2/endpoint2",apiKey2)
 };
 
-var handler = new RoundRobinRetryHandler(endpoints);
-var client = new HttpClient(handler);
+var roundRobinHandler = new RoundRobinRetryHandler(endpoints);
+var http = new HttpClient(roundRobinHandler);
 
 var promptRequestJSON = JsonSerializer.Serialize(new PromptRequest("What is the speed of light?"));
 
 while (true)
 {
-    var request = new HttpRequestMessage(HttpMethod.Post, "http://localhost:5295/api/v1/endpoint1")
+    var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost:5295/api/v1/endpoint1")
     {
         Content = new StringContent(promptRequestJSON, Encoding.UTF8, "application/json")
     };
-    var resp = await client.SendAsync(request);
-    if (resp.IsSuccessStatusCode)
+    var response = await http.SendAsync(requestMessage);
+    if (response.IsSuccessStatusCode)
     {
-        var response = JsonSerializer.Deserialize<CompletionResponse>(await resp.Content.ReadAsStringAsync());
-        Console.WriteLine(response?.content);
+        var completion = JsonSerializer.Deserialize<CompletionResponse>(await response.Content.ReadAsStringAsync());
+        Console.WriteLine(completion?.content);
     }
     await Task.Delay(200);
 }
