@@ -31,11 +31,11 @@ class RoundRobinRetryHandler:
         raise Exception("Request failed after 3 retries")
 
 
-guid1 = str(uuid.uuid4())
-guid2 = str(uuid.uuid4())
+apiKey1 = str(uuid.uuid4())
+apiKey2 = str(uuid.uuid4())
 handler = RoundRobinRetryHandler(
     ["http://localhost:5295/api/v1/endpoint1",
-     "http://localhost:5295/api/v1/endpoint1"], [guid1, guid1])
+     "http://localhost:5295/api/v1/endpoint1"], [apiKey1, apiKey1])
 
 prompt = {"prompt": "What is the speed of light?"}
 
