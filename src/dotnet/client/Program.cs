@@ -6,9 +6,9 @@ using Reliability;
 var apiKey1 = Guid.NewGuid().ToString();
 var apiKey2 = Guid.NewGuid().ToString();
 
-var endpoints = new Tuple<string, string>[] {
-    new("http://localhost:5295/api/v1/endpoint1",apiKey1),
-    new("http://localhost:5295/api/v2/endpoint2",apiKey2)
+var endpoints = new Tuple<string, string, int>[] {
+    new("http://localhost:5295/api/v1/endpoint1",apiKey1,1),
+    new("http://localhost:5295/api/v2/endpoint2",apiKey2,2)
 };
 
 var roundRobinHandler = new RoundRobinRetryHandler(endpoints);

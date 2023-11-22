@@ -1,23 +1,25 @@
-from typing import List
+from typing import Dict, List
 import aiohttp
 import asyncio
 import uuid
 
+test1 = ('test', 'test')
+test1[0]
+
 
 class RoundRobinRetryHandler:
-    def __init__(self, endpoints: List[str], api_keys: List[str], delay: int = 10, retries: int = 3):
-        self.endpoints: List[str] = endpoints
-        self.api_keys: List[str] = api_keys
+    def __init__(self, endpoints: List[Dict(str, str, int)], delay: int = 10, retries: int = 3):
+        self.endpoints: List[Dict(str, str, int)] = endpoints
         self.current_endpoint_index: int = 0
         self.delay: int = delay
         self.retries: int = retries
 
     async def make_request(self, method, path, data=None, **kwargs) -> str:
         for _ in range(self.retries):
-            endpoint = self.endpoints[self.current_endpoint_index % len(
+            endpoint_by_index = self.endpoints[self.current_endpoint_index % len(
                 self.endpoints)]
-            api_key = self.api_keys[self.current_endpoint_index % len(
-                self.api_keys)]
+            endpoint = endpoint_by_index[0]
+            api_key = endpoint_by_index[1]
             headers = {'api-key', api_key}
             async with aiohttp.ClientSession() as session:
                 async with session.request(method, endpoint + path, data=data, headers=headers, **kwargs) as response:
@@ -34,8 +36,8 @@ class RoundRobinRetryHandler:
 apiKey1 = str(uuid.uuid4())
 apiKey2 = str(uuid.uuid4())
 handler = RoundRobinRetryHandler(
-    ["http://localhost:5295/api/v1/endpoint1",
-     "http://localhost:5295/api/v1/endpoint1"], [apiKey1, apiKey1])
+    [("http://localhost:5295/api/v1/endpoint1", apKey1, 1),
+     ("http://localhost:5295/api/v1/endpoint1", apiKey2, 2)])
 
 prompt = {"prompt": "What is the speed of light?"}
 

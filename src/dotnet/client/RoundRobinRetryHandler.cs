@@ -4,12 +4,12 @@ using System.Net;
 
 public class RoundRobinRetryHandler : DelegatingHandler
 {
-    private readonly Tuple<string, string>[] endpoints;
+    private readonly Tuple<string, string, int>[] endpoints;
     private readonly int retries;
     private readonly int delay;
     private int _currentEndpointIndex = 0;
 
-    public RoundRobinRetryHandler(Tuple<string, string>[] endpoints, int retries = 3, int delay = 5) : base(new HttpClientHandler())
+    public RoundRobinRetryHandler(Tuple<string, string, int>[] endpoints, int retries = 3, int delay = 5) : base(new HttpClientHandler())
     {
         this.endpoints = endpoints;
         this.retries = retries;
@@ -22,8 +22,10 @@ public class RoundRobinRetryHandler : DelegatingHandler
         for (int i = 0; i < retries; i++)
         {
             idx = _currentEndpointIndex % endpoints.Length;
-            request.RequestUri = new Uri(endpoints[idx].Item1);
-            request.Headers.Add("api-key", endpoints[idx].Item2);
+            var (uri, apiKey, _) = endpoints[idx];
+
+            request.RequestUri = new Uri(uri);
+            request.Headers.Add("api-key", apiKey);
 
             var response = await base.SendAsync(request, cancellationToken);
             if (response.IsSuccessStatusCode)
