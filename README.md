@@ -1,4 +1,4 @@
-# ai-client-resiliency
+# Application Resiliency<br/>when calling OpenAI and other API endpoints
 
 Many service providers including OpenAI usually set limits on the number of calls that can be made. In the case of Azure OpenAI, there are token limits (TPM or tokens per minute) and limits on the number of requests per minute. When a server starts running out of resources or the service limits are exhausted, the provider may issue a 429 or TooManyRequests HTTP Status code, and also a Retry-After response header indicating how much time you should wait until you try the next request.
 
